@@ -189,7 +189,7 @@ Registration* Add_Registration(Registration *regList, int *recordSize) {
         unsigned int a, b, c, d, e, f;
         char extra;
 
-        int count = sscanf(newReg.macAddress, "%2x:%2x:%2x:%2x:%2x:%2x%c\n",
+        int count = sscanf(newReg.macAddress, "%2x:%2x:%2x:%2x:%2x:%2x%c",
                            &a, &b, &c, &d, &e, &f, &extra);
         correctMac = (count == 6);
 
@@ -267,7 +267,7 @@ void Sort(Registration *regList, int size) {
             for (int i = 0; i < size - 1; ++i) {
                 for (int j = 0; j < size - 1 - i ; ++j) {
 
-                    if (stricmp(regList[j].surname , regList[j + 1].surname) > 0) {
+                    if (strcasecmp(regList[j].surname , regList[j + 1].surname) > 0) {
                         Registration temp = regList[j];
                         regList[j] = regList[j + 1];
                         regList[j + 1] = temp;
