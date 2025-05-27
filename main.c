@@ -14,8 +14,8 @@ typedef struct {
 
 Registration* Load_RegistrationData(char *filePath, int *recordSize);
 void Display_RegistrationData(Registration *regList, int size);
-void Add_Registration(Registration **regList, int *recordSize);
-void Sort(Registration **regList, int size);
+Registration* Add_Registration(Registration *regList, int *recordSize);
+void Sort(Registration *regList, int size);
 void Statistics(Registration *regList, int size);
 void Menu();
 
@@ -33,10 +33,10 @@ int main(int argc, char *argv[]) {
         printf("This file does not exist. Please enter again: ");
         fgets(filePath, 100, stdin);
 
+        //remove the \n at the end of the filePath
+        filePath[strcspn(filePath, "\n")] = '\0';
+
         fileRead = fopen(filePath, "r");
-        if (fileRead != NULL) {
-            fclose(fileRead);
-        }
     }
     printf("The registration records file %s has been successfully loaded\n",filePath);
     printf("The following records have been loaded:\n");
@@ -69,11 +69,11 @@ int main(int argc, char *argv[]) {
         switch (input) {
             case '1':
                 //Add
-                Add_Registration(&RegistrationData, &recordSize);
+                RegistrationData = Add_Registration(RegistrationData, &recordSize);
                 break;
             case '2':
                 //Sort
-                Sort(&RegistrationData, recordSize);
+                Sort(RegistrationData, recordSize);
                 Display_RegistrationData(RegistrationData, recordSize);
                 break;
             case '3':
@@ -135,6 +135,7 @@ Registration* Load_RegistrationData(char *filePath, int *recordSize) {
     }
     *recordSize = i;
 
+    fclose(file);
     return RegistrationData;
 }
 
@@ -145,7 +146,7 @@ void Display_RegistrationData(Registration *regList, int size) {
         return;
     }
 
-    printf("RegID    NAME       SURNAME      STATUS     YEAR    DeviceMACAddress\n");
+    printf("RegID    NAME       SURNAME      STATUS     YEAR    DEVICEMACADDRESS\n");
 
     for (int i = 0; i < size; i++) {
         Registration reg = regList[i];
@@ -154,7 +155,7 @@ void Display_RegistrationData(Registration *regList, int size) {
     }
 }
 
-void Add_Registration(Registration **regList, int *recordSize) {
+Registration* Add_Registration(Registration *regList, int *recordSize) {
     Registration newReg;
 
     printf("Please enter the name: ");
@@ -185,13 +186,11 @@ void Add_Registration(Registration **regList, int *recordSize) {
     do {
         printf("Please enter the mac address: ");
         scanf("%17s", newReg.macAddress);
-        printf("Read: %s\n", newReg.macAddress);
         unsigned int a, b, c, d, e, f;
         char extra;
 
         int count = sscanf(newReg.macAddress, "%2x:%2x:%2x:%2x:%2x:%2x%c\n",
                            &a, &b, &c, &d, &e, &f, &extra);
-        printf("%d\n",count);
         correctMac = (count == 6);
 
         if (!correctMac) {
@@ -200,13 +199,13 @@ void Add_Registration(Registration **regList, int *recordSize) {
 
     } while (!correctMac);
 
-    if (*recordSize > 0) {
+    if (*recordSize > 0 && regList != NULL) {
 
         //Find the highest Registration ID
-        int highestID = (*regList)[0].regID;
+        int highestID = regList[0].regID;
         for (int i = 0; i < *recordSize; ++i) {
-            if ((*regList)[i].regID > highestID) {
-                highestID = (*regList)[i].regID;
+            if (regList[i].regID > highestID) {
+                highestID = regList[i].regID;
             }
         }
 
@@ -218,19 +217,21 @@ void Add_Registration(Registration **regList, int *recordSize) {
 
 
 
-    Registration *temp = realloc(*regList, (*recordSize + 1) * sizeof(Registration));
+    Registration *temp = realloc(regList, (*recordSize + 1) * sizeof(Registration));
     if (temp == NULL) {
         printf("Memory error\n");
+        free(regList);
         exit(1);
     }
-    *regList = temp;
-    (*regList)[*recordSize] = newReg;
+    regList = temp;
+    regList[*recordSize] = newReg;
     (*recordSize)++;
 
     printf("\nIt is recorded successfully!\n");
+    return regList;
 }
 
-void Sort(Registration **regList, int size) {
+void Sort(Registration *regList, int size) {
 
     char input;
     int validInput = 0;
@@ -242,6 +243,9 @@ void Sort(Registration **regList, int size) {
             printf("Invalid input!\n");
     }
 
+    if (regList == NULL) {
+        return;
+    }
 
     switch (input) {
         case '1':
@@ -249,10 +253,10 @@ void Sort(Registration **regList, int size) {
             for (int i = 0; i < size - 1; ++i) {
                 for (int j = 0; j < size - 1 - i ; ++j) {
 
-                    if ((*regList)[j].year > (*regList)[j + 1].year) {
-                        Registration temp = (*regList)[j];
-                        (*regList)[j] = (*regList)[j + 1];
-                        (*regList)[j + 1] = temp;
+                    if (regList[j].year > regList[j + 1].year) {
+                        Registration temp = regList[j];
+                        regList[j] = regList[j + 1];
+                        regList[j + 1] = temp;
                     }
                 }
             }
@@ -263,11 +267,10 @@ void Sort(Registration **regList, int size) {
             for (int i = 0; i < size - 1; ++i) {
                 for (int j = 0; j < size - 1 - i ; ++j) {
 
-                    //maybe add case insensitivity
-                    if (strcmp((*regList)[j].surname , (*regList)[j + 1].surname) > 0) {
-                        Registration temp = (*regList)[j];
-                        (*regList)[j] = (*regList)[j + 1];
-                        (*regList)[j + 1] = temp;
+                    if (stricmp(regList[j].surname , regList[j + 1].surname) > 0) {
+                        Registration temp = regList[j];
+                        regList[j] = regList[j + 1];
+                        regList[j + 1] = temp;
                     }
                 }
             }
@@ -279,6 +282,11 @@ void Sort(Registration **regList, int size) {
 }
 
 void Statistics(Registration *regList, int size) {
+
+    if (regList == NULL) {
+        return;
+    }
+
     int approved = 0;
     int blocked = 0;
     int declined = 0;
